@@ -1,0 +1,189 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://runtime-x.local/schemas/event-1.json",
+  "title": "RuntimeX JSONL event record, schema version 1",
+  "description": "One record per line of the RuntimeX event log. See docs/event-schema.md for full semantics.",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Version of this event schema."
+    },
+    "event_id": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Monotonically increasing event sequence number, unique per process run. 0-based."
+    },
+    "event": {
+      "type": "string",
+      "enum": [
+        "allocation",
+        "deallocation",
+        "reallocation",
+        "initialization",
+        "logger_error"
+      ]
+    },
+    "allocation_id": {
+      "type": ["integer", "null"],
+      "minimum": 1,
+      "description": "Stable per-run allocation identity minted when the allocation succeeds. null when no allocation resulted (failed allocation, untracked pointer) or information is unavailable."
+    },
+    "old_allocation_id": {
+      "type": ["integer", "null"],
+      "minimum": 1,
+      "description": "For reallocation: the identity being replaced. null when unknown/untracked or not a reallocation event."
+    },
+    "size": {
+      "type": ["integer", "null"],
+      "description": "Requested size in bytes for allocation/reallocation events. Not meaningful for other events."
+    },
+    "old_size": {
+      "type": ["integer", "null"],
+      "description": "Previous tracked size for deallocation/reallocation events. null when the pointer was untracked."
+    },
+    "message": {
+      "type": ["string", "null"],
+      "description": "Human-readable detail for logger_error events; null or absent on other events."
+    },
+    "timestamp_ns": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Monotonic clock reading at event emission (CLOCK_MONOTONIC, ns). Unsynced with wall time."
+    },
+    "process_id": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "thread_id": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "OS thread id (Linux gettid)."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["ok", "failed", "untracked"],
+      "description": "Status of the allocator operation this event describes (or of the instrumentation for initialization/logger_error). It never describes the logging operation itself; dropped events are not emitted at all."
+    }
+  },
+  "required": [
+    "schema_version",
+    "event_id",
+    "event",
+    "allocation_id",
+    "timestamp_ns",
+    "process_id",
+    "thread_id",
+    "status"
+  ],
+  "allOf": [
+    {
+      "if": { "properties": { "event": { "const": "allocation" } } },
+      "then": {
+        "properties": { "status": { "enum": ["ok", "failed"] } },
+        "anyOf": [
+          {
+            "properties": {
+              "status": { "const": "ok" },
+              "allocation_id": { "type": "integer", "minimum": 1 }
+            }
+          },
+          {
+            "properties": {
+              "status": { "const": "failed" },
+              "allocation_id": { "type": "null" }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "if": { "properties": { "event": { "const": "deallocation" } } },
+      "then": {
+        "anyOf": [
+          {
+            "properties": {
+              "status": { "const": "ok" },
+              "allocation_id": { "type": "integer", "minimum": 1 },
+              "old_size": { "type": "integer", "minimum": 0 }
+            }
+          },
+          {
+            "properties": {
+              "status": { "const": "untracked" },
+              "allocation_id": { "type": "null" }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "if": { "properties": { "event": { "const": "reallocation" } } },
+      "then": {
+        "properties": { "size": { "type": "integer", "minimum": 0 } },
+        "anyOf": [
+          {
+            "description": "Success: new id (supersedes old id). Old size may be null when the source pointer was untracked.",
+            "properties": {
+              "status": { "const": "ok" },
+              "allocation_id": { "type": "integer", "minimum": 1 }
+            }
+          },
+          {
+            "description": "Failure: no new allocation; allocation_id is null, old_allocation_id persists and remains valid.",
+            "properties": {
+              "status": { "const": "failed" },
+              "allocation_id": { "type": "null" },
+              "old_allocation_id": { "type": "integer", "minimum": 1 }
+            }
+          },
+          {
+            "description": "Failure of an untracked realloc: ids unavailable.",
+            "properties": {
+              "status": { "const": "failed" },
+              "allocation_id": { "type": "null" },
+              "old_allocation_id": { "type": "null" }
+            }
+          },
+          {
+            "description": "glibc zero-size realloc frees the block and returns NULL: recorded as ok with no new allocation.",
+            "properties": {
+              "status": { "const": "ok" },
+              "allocation_id": { "type": "null" },
+              "size": { "const": 0 }
+            }
+          },
+          {
+            "description": "Zero-size (or other) realloc of an untracked pointer.",
+            "properties": {
+              "status": { "const": "untracked" },
+              "allocation_id": { "type": "null" }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "if": { "properties": { "event": { "const": "initialization" } } },
+      "then": {
+        "properties": {
+          "allocation_id": { "type": "null" },
+          "old_allocation_id": { "type": "null" },
+          "status": { "enum": ["ok", "failed"] }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "event": { "const": "logger_error" } } },
+      "then": {
+        "properties": {
+          "allocation_id": { "type": "null" },
+          "old_allocation_id": { "type": "null" },
+          "status": { "const": "failed" }
+        }
+      }
+    }
+  ],
+  "$comment": "old_size, size (optional per event), old_allocation_id and message are optional per event type; the runtime emits only meaningful fields and omits the others."
+}
