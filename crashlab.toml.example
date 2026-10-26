@@ -1,0 +1,55 @@
+# Crashlab configuration example.
+#
+# Copy to crashlab.toml in the working directory, or pass with --config.
+# Precedence: explicit CLI flag > this file > built-in default.
+# Unknown keys are ignored with a warning.
+
+[run]
+# Target executable. A bare name (e.g. "python") is resolved on PATH.
+binary = "./examples/target"
+
+# Optional LD_PRELOAD library. POSIX only; recorded but not applied on Windows.
+# preload = "/usr/lib/x86_64-linux-gnu/libasan.so.8"
+
+# Per-run wall-clock timeout in seconds.
+timeout = 5.0
+
+# Results root. Relative paths resolve against the working directory.
+results_dir = "results"
+
+# How the input is delivered: "stdin", "file", or "arg".
+input_mode = "stdin"
+
+# Batch worker pool size.
+workers = 4
+
+# Child working directory. Omit to use each run directory.
+# cwd = "."
+
+# Extra argv passed to the target before any input argument.
+# extra_args = ["--verbose"]
+
+# Template for file/arg modes; {input} is replaced by the path or text.
+# arg_template = "--input={input}"
+
+# Effective ASAN_OPTIONS. When empty and an ASan preload is configured,
+# crashlab derives: abort_on_error=1:detect_leaks=0:symbolize=1
+# asan_options = "abort_on_error=1:detect_leaks=0:symbolize=1"
+
+# GDB analysis.
+gdb_path = "gdb"
+enable_gdb = true
+gdb_timeout = 30.0
+
+# Number of normalized frames included in a crash signature.
+signature_frames = 5
+
+[report]
+title = "Crashlab crash report"
+subtitle = "Automated crash triage for manual exploitability review"
+
+# Embed raw ASan/GDB text in the HTML report (escaped; 200 KB per file).
+include_raw_evidence = true
+
+# Optional fixed generation timestamp; omitted means "now" in UTC.
+# generated_at = "2026-01-01T00:00:00.000Z"

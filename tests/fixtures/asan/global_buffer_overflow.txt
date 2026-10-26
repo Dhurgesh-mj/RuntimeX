@@ -1,0 +1,9 @@
+=================================================================
+==4247==ERROR: AddressSanitizer: global-buffer-overflow on address 0x0000006010a0 at pc 0x000000401620 bp 0x7ffd00000f90 sp 0x7ffd00000f88
+READ of size 4 at 0x0000006010a0 thread T0
+    #0 0x40161f in read_global /home/research/crashlab/examples/target_demo.c:70:16
+    #1 0x401520 in main /home/research/crashlab/examples/target_demo.c:127:13
+
+0x0000006010a0 is located 0 bytes to the right of global variable 'g_table' defined in 'target_demo.c:20:12' (0x601080) of size 32
+SUMMARY: AddressSanitizer: global-buffer-overflow /home/research/crashlab/examples/target_demo.c:70:16 in read_global
+==4247==ABORTING

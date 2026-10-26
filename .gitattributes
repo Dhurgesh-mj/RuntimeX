@@ -1,0 +1,5 @@
+# Binary seed inputs must never be line-ending converted.
+*.bin binary
+*.bin -text
+# JSON/JSONL evidence samples
+*.jsonl text

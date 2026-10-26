@@ -1,6 +1,26 @@
-# Build artifacts
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
 build/
-logs/
+dist/
+.venv/
+venv/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
+# Crashlab output
+results/
+*.log
+
+# Sample target build products (source is tracked)
+examples/target
+examples/target_asan
+examples/target.exe
+examples/target_asan.exe
+examples/*.o
 
 # Runtime event logs
 *.jsonl

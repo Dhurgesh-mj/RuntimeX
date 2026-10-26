@@ -1,0 +1,9 @@
+=================================================================
+==4248==ERROR: LeakSanitizer: detected memory leaks
+
+Direct leak of 24 byte(s) in 1 object(s) allocated from:
+    #0 0x7f0000001111 in malloc (/lib/x86_64-linux-gnu/libasan.so.8+0xc1111)
+    #1 0x401700 in leak /home/research/crashlab/examples/target_demo.c:80:20
+    #2 0x401540 in main /home/research/crashlab/examples/target_demo.c:130:5
+
+SUMMARY: AddressSanitizer: 24 byte(s) leaked in 1 allocation(s).
