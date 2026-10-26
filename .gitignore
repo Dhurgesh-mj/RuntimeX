@@ -1,0 +1,15 @@
+# Build artifacts
+build/
+logs/
+
+# Runtime event logs
+*.jsonl
+# but keep the checked-in sample produced by a real run
+!examples/sample-events.jsonl
+
+# Editor / OS noise
+*.o
+*.so
+*.a
+*~
+.DS_Store

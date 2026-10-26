@@ -1,0 +1,7 @@
+{"schema_version":1,"event_id":0,"event":"initialization","allocation_id":null,"timestamp_ns":1532020199782,"process_id":32367,"thread_id":32367,"status":"ok"}
+{"schema_version":1,"event_id":1,"event":"allocation","allocation_id":1,"size":32,"timestamp_ns":1532020239698,"process_id":32367,"thread_id":32367,"status":"ok"}
+{"schema_version":1,"event_id":2,"event":"reallocation","allocation_id":2,"old_allocation_id":1,"size":256,"old_size":32,"timestamp_ns":1532020242571,"process_id":32367,"thread_id":32367,"status":"ok"}
+{"schema_version":1,"event_id":3,"event":"reallocation","allocation_id":null,"old_allocation_id":2,"size":18446744073709551615,"old_size":256,"timestamp_ns":1532020243735,"process_id":32367,"thread_id":32367,"status":"failed"}
+{"schema_version":1,"event_id":4,"event":"reallocation","allocation_id":3,"old_allocation_id":2,"size":16,"old_size":256,"timestamp_ns":1532020244717,"process_id":32367,"thread_id":32367,"status":"ok"}
+{"schema_version":1,"event_id":5,"event":"reallocation","allocation_id":null,"old_allocation_id":3,"size":0,"old_size":16,"timestamp_ns":1532020245645,"process_id":32367,"thread_id":32367,"status":"ok"}
+{"schema_version":1,"event_id":6,"event":"allocation","allocation_id":4,"size":4096,"timestamp_ns":1532020258052,"process_id":32367,"thread_id":32367,"status":"ok"}
