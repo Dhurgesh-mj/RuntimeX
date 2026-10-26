@@ -1,7 +1,7 @@
-# RuntimeX runtime architecture (Person 1 module)
+# HeapSentry runtime architecture (Person 1 module)
 
 This document describes the **implemented** architecture of
-`libruntimex.so`. Statements here reflect verified behavior in the
+`libheapsentry.so`. Statements here reflect verified behavior in the
 documented environment (Ubuntu 24.04, x86_64, glibc 2.39, gcc 13.3);
 see `instrumentation-limitations.md` for what is *not* supported or proven.
 
@@ -24,7 +24,7 @@ in a degraded state.
 
 Recursion considerations:
 
-- glibc's `dlsym()` may allocate (calloc) internally. RuntimeX does **not**
+- glibc's `dlsym()` may allocate (calloc) internally. HeapSentry does **not**
   wrap `calloc`, so `dlsym`'s internal allocations cannot recurse into the
   wrappers. Any later `free()` of that memory arrives as an *untracked*
   pointer and is forwarded to the real `free()`, which is its true owner.
@@ -81,7 +81,7 @@ Special cases are explicit:
   tombstones; lookup skips tombstones. No heap allocation happens anywhere
   in the instrumentation, which is the structural guarantee against
   recursive entry through the allocator.
-- Capacity can be lowered at init with `RUNTIMEX_TRACKED` (power of two,
+- Capacity can be lowered at init with `HEAPSENTRY_TRACKED` (power of two,
   ≥16) to exercise exhaustion. When live entries reach capacity, new
   allocations are logged normally but **not tracked**: their later frees
   are `untracked`. Tracker exhaustion never changes allocator results.
@@ -99,13 +99,14 @@ handled) while holding a pthread mutex. Consequences:
 - `thread_id` is the Linux `gettid()` value; `process_id` is `getpid()`.
 - Strings are JSON-escaped by a small escaping writer; integers are emitted
   as unsigned decimals. `null` marks unavailable values.
-- Output goes to `RUNTIMEX_LOG` (`O_TRUNC|O_APPEND`; each process run maps
-  to exactly one log, default `./runtimex_events.jsonl`).
+- Output goes to `HEAPSENTRY_LOG` (`O_TRUNC|O_APPEND`; each process run maps
+  with an unset `HEAPSENTRY_LOG` the default is **per process**
+  (`heapsentry_events_<pid>.jsonl`).
 
 Failure policy (also in `event-schema.md`):
 
 - Open failure at init (`invalid path`, `EACCES`, …): sticky failed state;
-  every event is counted as dropped (`runtimex_dropped_events()`).
+  every event is counted as dropped (`heapsentry_dropped_events()`).
 - First unsuccessful `write()` (e.g. `ENOSPC` to `/dev/full`): sticky
   failed state, fd closed, later events dropped.
 - One `logger_error` event is attempted on first failure; its own failure
@@ -134,9 +135,9 @@ Failure policy (also in `event-schema.md`):
 ## 7. Initialization sequence
 
 ```
-constructor(101): rtx_table_init()      # reads RUNTIMEX_TRACKED, clears table
+constructor(101): rtx_table_init()      # reads HEAPSENTRY_TRACKED, clears table
                  rtx_resolve_symbols()  # dlsym x3; sets rtx_ready
-                 rtx_event_logger_init()# RUNTIMEX_LOG; on failure → sticky
+                 rtx_event_logger_init()# HEAPSENTRY_LOG; on failure → sticky
                  rtx_log_initialization(status)  # first event (id 0)
 ```
 

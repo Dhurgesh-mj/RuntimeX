@@ -1,5 +1,5 @@
 /*
- * RuntimeX Runtime Core — JSONL event logger (Person 1).
+ * HeapSentry Runtime Core — JSONL event logger (Person 1).
  *
  * Low-level write(2)-based logger. No stdio, no heap allocation in the
  * hot path: an event line is rendered into a fixed buffer and issued with
@@ -18,6 +18,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -33,6 +34,11 @@ static int g_logger_error_logged = 0;
 static uint64_t g_event_seq = 0;
 static uint64_t g_dropped = 0;
 static pthread_mutex_t g_log_lock = PTHREAD_MUTEX_INITIALIZER;
+
+/* Crashlab join keys, captured once at init (setenv-free, no allocator use). */
+static char g_run_id[128];
+static char g_batch_id[128];
+static char g_default_log_path[192];
 
 /* ---------------- fixed-buffer JSON writer ---------------- */
 
@@ -133,6 +139,11 @@ static void wb_common_prefix(wbuf_t *w, uint64_t event_id, const char *event)
     wb_u64(w, event_id);
     wb_lit(w, ",\"event\":");
     wb_json_str(w, event);
+    /* Correlation join keys (always present; null when unset). */
+    wb_lit(w, ",\"run_id\":");
+    if (g_run_id[0] != '\0') wb_json_str(w, g_run_id); else wb_lit(w, "null");
+    wb_lit(w, ",\"batch_id\":");
+    if (g_batch_id[0] != '\0') wb_json_str(w, g_batch_id); else wb_lit(w, "null");
 }
 
 static void wb_id_field(wbuf_t *w, const char *name, uint64_t id)
@@ -213,6 +224,20 @@ static int write_all(const char *buf, size_t len)
     return 0;
 }
 
+/* Crashlab join keys are static above; loader here. */
+static void load_join_keys(void)
+{
+    const char *v;
+
+    v = getenv(HEAPSENTRY_ENV_RUN_ID);
+    if (v != NULL && v[0] != '\0' && strlen(v) < sizeof(g_run_id))
+        strcpy(g_run_id, v);
+
+    v = getenv(HEAPSENTRY_ENV_BATCH_ID);
+    if (v != NULL && v[0] != '\0' && strlen(v) < sizeof(g_batch_id))
+        strcpy(g_batch_id, v);
+}
+
 int rtx_event_logger_init(int *ok_out)
 {
     const char *path;
@@ -228,9 +253,21 @@ int rtx_event_logger_init(int *ok_out)
         pthread_mutex_unlock(&g_log_lock);
         return g_log_fd >= 0 ? 0 : -1;
     }
-    path = getenv("RUNTIMEX_LOG");
+    path = getenv(HEAPSENTRY_ENV_LOG);
     if (path == NULL || path[0] == '\0')
-        path = "./runtimex_events.jsonl";
+        path = getenv(HEAPSENTRY_ENV_LOG_OLD); /* legacy alias */
+    if (path == NULL || path[0] == '\0') {
+        /* No explicit destination: use a per-process default so concurrent
+         * instrumented processes (spawn, threads, batch runners) cannot
+         * interleave into one file. */
+        int n = snprintf(g_default_log_path, sizeof(g_default_log_path),
+                         "./heapsentry_events_%ld.jsonl", (long)getpid());
+        if (n > 0 && (size_t)n < sizeof(g_default_log_path))
+            path = g_default_log_path;
+        else
+            path = "./heapsentry_events.jsonl";
+    }
+    load_join_keys();
     fd = open(path, O_WRONLY | O_CREAT | O_TRUNC | O_APPEND, 0644);
     if (fd < 0) {
         g_log_failed = 1;

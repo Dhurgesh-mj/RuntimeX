@@ -1,6 +1,6 @@
 /*
- * RuntimeX test: metadata exhaustion policy (run under LD_PRELOAD).
- * RUNTIMEX_TRACKED (see Makefile) lowers the tracking capacity so the
+ * HeapSentry test: metadata exhaustion policy (run under LD_PRELOAD).
+ * HEAPSENTRY_TRACKED (see Makefile) lowers the tracking capacity so the
  * test can exhaust it quickly. Live allocations beyond capacity are still
  * real allocations (malloc must not fail); their later frees are events
  * with status "untracked" and the real allocator is still called.
@@ -9,7 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define LIVE 200   /* must exceed RUNTIMEX_TRACKED used in the Makefile */
+#define LIVE 200   /* must exceed HEAPSENTRY_TRACKED used in the Makefile */
 
 int main(void)
 {

@@ -1,9 +1,16 @@
-# RuntimeX JSONL event schema — version 1
+# HeapSentry JSONL event schema — version 1
 
 Machine contract: `shared/event_schema.json` (JSON Schema Draft 2020-12).
 This page is the human-readable definition. **Schema version: 1.**
 This is the integration contract with Person 2. Any change bumps the
 version and updates `event_logger.c` and the tests.
+
+> **Additive change log (schema version 1, backward compatible):**
+> `run_id` and `batch_id` (string or null) were added to every record so
+> person 2's crashlab can join crash records to allocator events by
+> `run_id` (see `crashlab.models.RuntimeTraceRef` and `docs/schema.md`).
+> The change is purely additive; consumers that ignore unknown fields are
+> unaffected. Verified by `make check-correlation`.
 
 ## Record layout
 
@@ -14,6 +21,8 @@ Every line of an event log is one JSON object. All records carry:
 | `schema_version` | integer (constant 1) | Contract version |
 | `event_id` | integer ≥ 0 | Emission-order sequence number, unique per process run, starts at 0, strictly increasing (gapless while no events are dropped) |
 | `event` | string | One of: `allocation`, `deallocation`, `reallocation`, `initialization`, `logger_error` |
+| `run_id` | string or null | Crashlab join key from `CRASHLAB_RUN_ID`, stamped on **every** event when the environment provides it; null otherwise. Consumer: `crashlab.models.RuntimeTraceRef` (`docs/schema.md`) |
+| `batch_id` | string or null | Crashlab join key from `CRASHLAB_BATCH_ID` when present; null otherwise |
 | `allocation_id` | integer ≥ 1 or null | Identity of the allocation the event is about |
 | `old_allocation_id` | integer ≥ 1 or null | Only for `reallocation` |
 | `size` | integer ≥ 0 | Requested size (allocation, reallocation; also 0 in the zero-size-realloc case) |
@@ -47,7 +56,7 @@ must be treated as unknown by consumers.
 - `status:"untracked"`, `allocation_id: null`. Emitted when freeing a
   pointer whose identity is unknown: untracked pointer, tracker
   exhaustion, or a bootstrap-arena chunk. The real `free()` was called
-  (except bootstrap chunks); RuntimeX just cannot attribute identity.
+  (except bootstrap chunks); HeapSentry just cannot attribute identity.
 
 ### `reallocation`
 - `status:"ok"`, `allocation_id` = **new id**, `old_allocation_id` = old id,
@@ -93,7 +102,7 @@ must be treated as unknown by consumers.
 ## Error conditions and dropped events
 
 - If the logger cannot open the file, events are dropped and unrecordable
-  (process exit status is unaffected). `runtimex_dropped_events()` exposes
+  (process exit status is unaffected). `heapsentry_dropped_events()` exposes
   the counter for tests.
 - A `logger_error` event may itself fail to be written; then the log shows
   nothing and consumers must treat missing logs/unfinished runs as
@@ -101,13 +110,13 @@ must be treated as unknown by consumers.
 - `status:"failed"` in allocator events never reflects logging trouble and
   vice versa; the two failure domains are disjoint.
 
-## Example records (real output)
+## Example records (real output, with crashlab join keys stamped)
 
 ```jsonl
-{"schema_version":1,"event_id":0,"event":"initialization","allocation_id":null,"timestamp_ns":100265973000,"process_id":1000001,"thread_id":1000001,"status":"ok"}
-{"schema_version":1,"event_id":1,"event":"allocation","allocation_id":1,"size":64,"timestamp_ns":100265987234,"process_id":1000001,"thread_id":1000001,"status":"ok"}
-{"schema_version":1,"event_id":2,"event":"reallocation","allocation_id":2,"old_allocation_id":1,"size":256,"old_size":64,"timestamp_ns":100267759720,"process_id":1000001,"thread_id":1000001,"status":"ok"}
-{"schema_version":1,"event_id":3,"event":"deallocation","allocation_id":2,"old_size":256,"timestamp_ns":100267768393,"process_id":1000001,"thread_id":1000001,"status":"ok"}
-```
+{"schema_version":1,"event_id":0,"event":"initialization","run_id":"run-20260101T000000_sample","batch_id":"batch-sample","allocation_id":null,"timestamp_ns":6474201365104,"process_id":83145,"thread_id":83145,"status":"ok"}
+{"schema_version":1,"event_id":1,"event":"allocation","run_id":"run-20260101T000000_sample","batch_id":"batch-sample","allocation_id":1,"size":32,"timestamp_ns":6474201455282,"process_id":83145,"thread_id":83145,"status":"ok"}
+{"schema_version":1,"event_id":2,"event":"reallocation","run_id":"run-20260101T000000_sample","batch_id":"batch-sample","allocation_id":2,"old_allocation_id":1,"size":256,"old_size":32,"timestamp_ns":6474201463004,"process_id":83145,"thread_id":83145,"status":"ok"}
+{"schema_version":1,"event_id":3,"event":"reallocation","run_id":"run-20260101T000000_sample","batch_id":"batch-sample","allocation_id":null,"old_allocation_id":2,"size":18446744073709551615,"old_size":256,"timestamp_ns":6474201464623,"process_id":83145,"thread_id":83145,"status":"failed"}
+{"schema_version":1,"event_id":4,"event":"reallocation","run_id":"run-20260101T000000_sample","batch_id":"batch-sample","allocation_id":3,"old_allocation_id":2,"size":16,"old_size":256,"timestamp_ns":6474201467366,"process_id":83145,"thread_id":83145,"status":"ok"}```
 (A full, unmodified sample produced by a real run is checked in at
 `examples/sample-events.jsonl`.)

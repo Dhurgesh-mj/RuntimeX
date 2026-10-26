@@ -1,5 +1,5 @@
 /*
- * RuntimeX Runtime Core — allocator hooks and lifecycle tracking (Person 1).
+ * HeapSentry Runtime Core — allocator hooks and lifecycle tracking (Person 1).
  *
  * Design notes:
  *  - The lifecycle table is a fixed-size open-addressing hash table in the
@@ -25,7 +25,7 @@ uint64_t rtx_next_alloc_id = 0; /* 0 reserved: add_fetch yields 1 first */
 
 /* ---------------- bootstrap arena ---------------- */
 
-static _Alignas(16) unsigned char rtx_boot_arena[RUNTIMEX_BOOT_ARENA_SIZE];
+static _Alignas(16) unsigned char rtx_boot_arena[HEAPSENTRY_BOOT_ARENA_SIZE];
 static size_t rtx_boot_used = 0; /* pre-init single-thread window (ld.so) */
 
 void *rtx_boot_alloc(size_t size)
@@ -36,7 +36,7 @@ void *rtx_boot_alloc(size_t size)
         errno = ENOMEM;
         return NULL;
     }
-    if (rtx_boot_used + total > RUNTIMEX_BOOT_ARENA_SIZE ||
+    if (rtx_boot_used + total > HEAPSENTRY_BOOT_ARENA_SIZE ||
         rtx_boot_used + total < rtx_boot_used) {
         errno = ENOMEM;
         return NULL;
@@ -52,7 +52,7 @@ int rtx_in_boot_arena(const void *p)
 {
     return (const unsigned char *)p >= rtx_boot_arena &&
            (const unsigned char *)p <  rtx_boot_arena +
-                                       RUNTIMEX_BOOT_ARENA_SIZE;
+                                       HEAPSENTRY_BOOT_ARENA_SIZE;
 }
 
 /* ---------------- lifecycle table ---------------- */
@@ -63,26 +63,26 @@ typedef struct {
     size_t   size;
 } slot_t;
 
-/* RUNTIMEX_MAX_TRACKED is the static hard cap; the active capacity
- * (power of two, [16, RUNTIMEX_MAX_TRACKED]) can be lowered at init via
- * the RUNTIMEX_TRACKED environment variable to exercise exhaustion. */
-static slot_t rtx_table[RUNTIMEX_MAX_TRACKED];
-#define RTX_TABLE_MASK RUNTIMEX_MAX_TRACKED
+/* HEAPSENTRY_MAX_TRACKED is the static hard cap; the active capacity
+ * (power of two, [16, HEAPSENTRY_MAX_TRACKED]) can be lowered at init via
+ * the HEAPSENTRY_ENV_TRACKED environment variable to exercise exhaustion. */
+static slot_t rtx_table[HEAPSENTRY_MAX_TRACKED];
+#define RTX_TABLE_MASK HEAPSENTRY_MAX_TRACKED
 static size_t rtx_table_live = 0;
-static size_t rtx_cap = RUNTIMEX_MAX_TRACKED;
+static size_t rtx_cap = HEAPSENTRY_MAX_TRACKED;
 static int    rtx_table_full = 0;
 static pthread_mutex_t rtx_table_lock = PTHREAD_MUTEX_INITIALIZER;
 
 void rtx_table_init(void)
 {
     const char *env;
-    size_t cap = RUNTIMEX_MAX_TRACKED;
+    size_t cap = HEAPSENTRY_MAX_TRACKED;
 
     memset(rtx_table, 0, sizeof(rtx_table));
     rtx_table_live = 0;
     rtx_table_full = 0;
 
-    env = getenv("RUNTIMEX_TRACKED");
+    env = getenv(HEAPSENTRY_ENV_TRACKED);
     if (env != NULL && *env != '\0') {
         char *endp;
         unsigned long long v = strtoull(env, &endp, 10);
@@ -92,7 +92,7 @@ void rtx_table_init(void)
     /* Round down to a power of two, clamp to the static array. */
     while ((cap & (cap - 1)) != 0)
         cap &= cap - 1;
-    rtx_cap = cap < 16 ? 16 : (cap > RUNTIMEX_MAX_TRACKED ? RUNTIMEX_MAX_TRACKED : cap);
+    rtx_cap = cap < 16 ? 16 : (cap > HEAPSENTRY_MAX_TRACKED ? HEAPSENTRY_MAX_TRACKED : cap);
 }
 
 int rtx_table_capacity(void)

@@ -1,5 +1,5 @@
 /*
- * RuntimeX test: threaded allocation (run under LD_PRELOAD).
+ * HeapSentry test: threaded allocation (run under LD_PRELOAD).
  * Concurrent alloc/realloc/free across threads with distinct payloads;
  * checks data integrity of each thread's own blocks.
  */

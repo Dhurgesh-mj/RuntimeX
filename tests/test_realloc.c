@@ -1,5 +1,5 @@
 /*
- * RuntimeX test: realloc semantics (run under LD_PRELOAD or standalone).
+ * HeapSentry test: realloc semantics (run under LD_PRELOAD or standalone).
  * Data-level checks here; identity relationships in the event log are
  * verified by tests/test_event_schema.py.
  */

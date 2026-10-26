@@ -246,6 +246,22 @@ def test_build_gdb_request_rewrites_file_input_to_copy(tmp_path: Path) -> None:
     assert request.env["CRASHLAB_RUN_ID"] == run.run_id
 
 
+def test_build_gdb_request_drops_target_ld_preload(tmp_path: Path) -> None:
+    """Regression: the debugger must not be preloaded with the target's
+    instrumentation library (gdb's own allocator noise polluted the
+    runtime-event log under a real-world run)."""
+    run = make_run(tmp_path)
+    run.preload = "/abs/path/libheapsentry.so"
+    run.preload_applied = True
+    run.env_overrides = {
+        "LD_PRELOAD": "/abs/path/libheapsentry.so",
+        "CRASHLAB_RUN_ID": run.run_id,
+    }
+    request = build_gdb_request(run)
+    assert "LD_PRELOAD" not in request.env
+    assert request.env["CRASHLAB_RUN_ID"] == run.run_id
+
+
 def test_build_gdb_request_uses_stdin_copy(tmp_path: Path) -> None:
     run = make_run(tmp_path, input_mode=InputMode.STDIN)
     request = build_gdb_request(run)

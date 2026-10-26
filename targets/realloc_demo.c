@@ -1,5 +1,5 @@
 /*
- * RuntimeX target B: reallocation demo.
+ * HeapSentry target B: reallocation demo.
  * Exercises successful realloc growth/contraction, realloc-failure
  * preservation, and zero-size behavior. Exits 0 on success.
  */

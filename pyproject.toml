@@ -9,7 +9,7 @@ description = "Reproducible crash triage engine for local memory-safety test tar
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
-authors = [{ name = "RuntimeX memory-safety project" }]
+authors = [{ name = "HeapSentry memory-safety project" }]
 keywords = ["security", "fuzzing", "asan", "gdb", "crash-triage"]
 classifiers = [
     "Development Status :: 3 - Alpha",

@@ -1,5 +1,5 @@
 /*
- * RuntimeX Runtime Core — library entry point (Person 1).
+ * HeapSentry Runtime Core — library entry point (Person 1).
  *
  * Constructor: resolve real allocator symbols, initialize the lifecycle
  * table, open the event log, and emit one `initialization` event.
@@ -33,14 +33,14 @@ static void rtx_runtime_init(void)
 
 /* Provide the dropped-event count through a visible symbol for tests. */
 __attribute__((visibility("default")))
-unsigned long runtimex_dropped_events(void)
+unsigned long heapsentry_dropped_events(void)
 {
     return (unsigned long)rtx_log_dropped();
 }
 
 /* Symbol the Python tests look for to confirm expected exports. */
 __attribute__((visibility("default")))
-int runtimex_schema_version(void)
+int heapsentry_schema_version(void)
 {
-    return RUNTIMEX_SCHEMA_VERSION;
+    return HEAPSENTRY_SCHEMA_VERSION;
 }

@@ -1,12 +1,12 @@
 /*
- * RuntimeX Runtime Core — internal shared definitions (Person 1).
+ * HeapSentry Runtime Core — internal shared definitions (Person 1).
  *
- * Supported environment (see docs/instrumentation-limitations.md):
+ * Supported environment (see docs/limitations.md):
  *   Linux x86_64, glibc, dynamically linked ELF executables,
  *   LD_PRELOAD interposition of malloc/free/realloc only.
  */
-#ifndef RUNTIMEX_INTERNAL_H
-#define RUNTIMEX_INTERNAL_H
+#ifndef HEAPSENTRY_INTERNAL_H
+#define HEAPSENTRY_INTERNAL_H
 
 #include <stddef.h>
 #include <stdint.h>
@@ -14,17 +14,24 @@
 
 /* Schema version emitted in every event record. Must match
  * shared/event_schema.json ("const": 1) and docs/event-schema.md. */
-#define RUNTIMEX_SCHEMA_VERSION 1
+#define HEAPSENTRY_SCHEMA_VERSION 1
+
+/* Environment variables honored by the runtime core. */
+#define HEAPSENTRY_ENV_LOG      "HEAPSENTRY_LOG"      /* output path */
+#define HEAPSENTRY_ENV_LOG_OLD  "RUNTIMEX_LOG"        /* legacy alias */
+#define HEAPSENTRY_ENV_TRACKED  "HEAPSENTRY_TRACKED"  /* tracker capacity */
+#define HEAPSENTRY_ENV_RUN_ID   "CRASHLAB_RUN_ID"     /* crashlab join key */
+#define HEAPSENTRY_ENV_BATCH_ID "CRASHLAB_BATCH_ID"   /* crashlab join key */
 
 /* Maximum number of simultaneously tracked live allocations. When this many
  * live allocations exist, further allocations are still logged (with a fresh
  * allocation_id) but their identity is no longer remembered; a later free()
  * of such a pointer is logged with status "untracked". */
-#define RUNTIMEX_MAX_TRACKED 65536
+#define HEAPSENTRY_MAX_TRACKED 65536
 
 /* Static bootstrap arena used only when the real allocator has not been
  * resolved yet (early dynamic-linker / dlsym-recursion window). */
-#define RUNTIMEX_BOOT_ARENA_SIZE (256u * 1024u)
+#define HEAPSENTRY_BOOT_ARENA_SIZE (256u * 1024u)
 
 typedef struct boot_hdr {
     size_t size;      /* requested size */
@@ -69,9 +76,9 @@ void rtx_table_insert(void *p, uint64_t id, size_t size);
 void rtx_table_remove(void *p);
 /* Returns 1 and fills id_out and size_out if tracked, 0 if untracked. */
 int  rtx_table_lookup(const void *p, uint64_t *id_out, size_t *size_out);
-/* Nonzero once the table is exhausted (see RUNTIMEX_MAX_TRACKED). */
+/* Nonzero once the table is exhausted (see HEAPSENTRY_MAX_TRACKED). */
 int  rtx_table_is_exhausted(void);
-/* Active capacity (for testing exhaustion via RUNTIMEX_TRACKED). */
+/* Active capacity (for testing exhaustion via HEAPSENTRY_ENV_TRACKED_). */
 int  rtx_table_capacity(void);
 
 /* ---------- event_logger.c ---------- */
@@ -87,7 +94,7 @@ int  rtx_table_capacity(void);
 #define RTX_EVENT_INIT         "initialization"
 #define RTX_EVENT_LOGGER_ERROR "logger_error"
 
-/* Open the event log from RUNTIMEX_LOG (default: ./runtimex_events.jsonl).
+/* Open the event log from HEAPSENTRY_ENV_LOG (default: ./heapsentry_events.jsonl).
  * Returns 0 on success. On failure the logger enters the failed state and
  * every later event is counted as dropped. */
 int rtx_event_logger_init(int *ok_out);
@@ -115,4 +122,4 @@ void rtx_log_logger_error(const char *message);
 /* Number of events dropped because the logger is unavailable/failed. */
 uint64_t rtx_log_dropped(void);
 
-#endif /* RUNTIMEX_INTERNAL_H */
+#endif /* HEAPSENTRY_INTERNAL_H */

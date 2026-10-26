@@ -632,6 +632,13 @@ def build_gdb_request(run: RunResult, *, timeout: float = 30.0) -> GdbRequest:
 
     env = dict(os.environ)
     env.update(run.env_overrides)
+    # The debugger is not the inferior: do not propagate the target's
+    # LD_PRELOAD instrumentation into gdb. Otherwise gdb itself is
+    # instrumented, which pollutes the runtime-event log with gdb's own
+    # allocator activity (verified in a 14k-event log where gdb ran under
+    # the preload alongside the target) and can destabilize debugging.
+    # Correlation variables (CRASHLAB_*) stay in place.
+    env.pop("LD_PRELOAD", None)
     cwd = run.cwd if run.cwd and Path(run.cwd).is_dir() else run.run_dir
     return GdbRequest(
         binary=run.binary_resolved,

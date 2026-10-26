@@ -1,10 +1,10 @@
 /*
- * RuntimeX target D: controlled vulnerable demo.
+ * HeapSentry target D: controlled vulnerable demo.
  *
  * WARNING — this file intentionally contains a heap buffer overflow
  * (writes past a too-small malloc with strcpy). It exists solely so a
- * human can observe in a controlled LOCAL environment what RuntimeX logs
- * around a memory-unsafe program. RuntimeX does not detect the overflow:
+ * human can observe in a controlled LOCAL environment what HeapSentry logs
+ * around a memory-unsafe program. HeapSentry does not detect the overflow:
  * it records allocation lifecycle events; crash analysis is Person 2's
  * module. Run only on test data in this repository.
  */

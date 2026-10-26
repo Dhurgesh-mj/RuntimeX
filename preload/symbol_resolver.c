@@ -1,5 +1,5 @@
 /*
- * RuntimeX Runtime Core — dynamic symbol resolution (Person 1).
+ * HeapSentry Runtime Core — dynamic symbol resolution (Person 1).
  *
  * Resolves the real malloc/free/realloc with dlsym(RTLD_NEXT, ...).
  *

@@ -1,11 +1,12 @@
-# RuntimeX
+# HeapSentry
 
-RuntimeX is a defensive memory-safety research project in two parts:
+HeapSentry is a defensive memory-safety research project in two parts:
 
-1. **Runtime core** (`preload/`, `shared/`, `targets/`, `docs/runtime-*.md`) —
-   an `LD_PRELOAD`-based allocator/event instrumentation layer that records
-   runtime events around allocation and free sites. See
-   [`docs/runtime-architecture.md`](docs/runtime-architecture.md) and
+1. **Runtime core** (`preload/`, `shared/`, `targets/`, `docs/architecture.md`,
+   `docs/event-schema.md`, `docs/limitations.md`, `docs/testing.md`) —
+   an `LD_PRELOAD`-based allocator/event instrumentation layer
+   (`build/libheapsentry.so`) that records runtime events around allocation and
+   free sites. See [`docs/architecture.md`](docs/architecture.md) and
    [`docs/event-schema.md`](docs/event-schema.md).
 2. **Crashlab** (`src/crashlab/`, `pyproject.toml`, `corpus/`, `docs/schema.md`) —
    a Python 3.10+ CLI harness that runs local test binaries, detects and
@@ -308,11 +309,14 @@ The target environment receives:
 | `CRASHLAB_TIMEOUT_SECONDS` | Configured timeout. |
 | `CRASHLAB_INPUT_SHA256` | Hash of the exact input bytes. |
 
-Passing `--preload preload/event_logger.so` (POSIX) makes crashlab run the
-target **under the runtime event logger**, so crash records join the allocator
-events they explain. Join on `run_id` when the runtime logger can stamp it, or
-on overlapping `[timestamp_start, timestamp_end]` windows when events are
-captured out of band. The full contract is in [`docs/schema.md`](docs/schema.md).
+Passing `--preload <abs path>/build/libheapsentry.so` (POSIX) makes crashlab run
+the target **under the runtime event logger**. The logger stamps
+`CRASHLAB_RUN_ID` and `CRASHLAB_BATCH_ID` onto every emitted event as the
+`run_id`/`batch_id` fields (verified by `make check-correlation`), so crash
+records join the allocator events they explain. Join on `run_id` when the
+runtime logger can stamp it, or on overlapping `[timestamp_start,
+timestamp_end]` windows when events are captured out of band. The full
+contract is in [`docs/schema.md`](docs/schema.md).
 
 ## Configuration
 

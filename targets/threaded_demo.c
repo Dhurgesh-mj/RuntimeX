@@ -1,5 +1,5 @@
 /*
- * RuntimeX target C: multithreaded allocation demo.
+ * HeapSentry target C: multithreaded allocation demo.
  * Several threads allocate, touch, and free blocks concurrently.
  * Validates that tracking state survives concurrency (the assertion here
  * is that the thread job itself completes with valid data).

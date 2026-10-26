@@ -17,7 +17,7 @@ TEST_DIR   := tests
 BUILD_DIR  := build
 LOGS_DIR   := logs
 
-LIB := $(BUILD_DIR)/libruntimex.so
+LIB := $(BUILD_DIR)/libheapsentry.so
 PY  := python3
 
 LIB_SRCS  := $(wildcard $(LIB_DIR)/*.c)
@@ -69,14 +69,14 @@ PRELOAD = LD_PRELOAD=$(abspath $(LIB))
 test: library tests
 	@set -e; \
 	mkdir -p $(BUILD_DIR) $(LOGS_DIR); \
-	$(PRELOAD) RUNTIMEX_LOG=$(LOG_SAFE)   $(BUILD_DIR)/safe_demo; \
-	$(PRELOAD) RUNTIMEX_LOG=$(LOG_REAL)   $(BUILD_DIR)/realloc_demo; \
-	$(PRELOAD) RUNTIMEX_LOG=$(LOG_THREA)  $(BUILD_DIR)/threaded_demo; \
-	$(PRELOAD) RUNTIMEX_LOG=$(LOG_STRESS) $(BUILD_DIR)/test_stress; \
-	$(PRELOAD) RUNTIMEX_LOG=$(BUILD_DIR)/test_realloc.jsonl $(BUILD_DIR)/test_realloc; \
-	$(PRELOAD) RUNTIMEX_LOG=$(BUILD_DIR)/test_threads.jsonl $(BUILD_DIR)/test_threads; \
-	$(PRELOAD) RUNTIMEX_TRACKED=64 \
-	  RUNTIMEX_LOG=$(BUILD_DIR)/test_exhaustion.jsonl $(BUILD_DIR)/test_exhaustion; \
+	$(PRELOAD) HEAPSENTRY_LOG=$(LOG_SAFE)   $(BUILD_DIR)/safe_demo; \
+	$(PRELOAD) HEAPSENTRY_LOG=$(LOG_REAL)   $(BUILD_DIR)/realloc_demo; \
+	$(PRELOAD) HEAPSENTRY_LOG=$(LOG_THREA)  $(BUILD_DIR)/threaded_demo; \
+	$(PRELOAD) HEAPSENTRY_LOG=$(LOG_STRESS) $(BUILD_DIR)/test_stress; \
+	$(PRELOAD) HEAPSENTRY_LOG=$(BUILD_DIR)/test_realloc.jsonl $(BUILD_DIR)/test_realloc; \
+	$(PRELOAD) HEAPSENTRY_LOG=$(BUILD_DIR)/test_threads.jsonl $(BUILD_DIR)/test_threads; \
+	$(PRELOAD) HEAPSENTRY_TRACKED=64 \
+	  HEAPSENTRY_LOG=$(BUILD_DIR)/test_exhaustion.jsonl $(BUILD_DIR)/test_exhaustion; \
 	$(PY) $(TEST_DIR)/test_event_schema.py \
 	      $(LOG_SAFE) $(LOG_REAL) $(LOG_THREA) $(LOG_STRESS) \
 	      $(BUILD_DIR)/test_realloc.jsonl $(BUILD_DIR)/test_threads.jsonl \
@@ -95,7 +95,7 @@ check: test
 check-baseline: library tests
 	@set -e; \
 	$(BUILD_DIR)/safe_demo > $(BUILD_DIR)/baseline.out; \
-	$(PRELOAD) RUNTIMEX_LOG=$(BUILD_DIR)/base.jsonl \
+	$(PRELOAD) HEAPSENTRY_LOG=$(BUILD_DIR)/base.jsonl \
 	  $(BUILD_DIR)/safe_demo > $(BUILD_DIR)/inst.out; \
 	cmp $(BUILD_DIR)/baseline.out $(BUILD_DIR)/inst.out; \
 	grep -q "initialization" $(BUILD_DIR)/base.jsonl; \
@@ -105,26 +105,26 @@ check-baseline: library tests
 # exercises the sticky write-failure path (open succeeds, writes fail).
 check-logging-failures: library tests
 	@set -e; \
-	$(PRELOAD) RUNTIMEX_LOG=$(BUILD_DIR)/no-such-dir/x.jsonl \
+	$(PRELOAD) HEAPSENTRY_LOG=$(BUILD_DIR)/no-such-dir/x.jsonl \
 	  $(BUILD_DIR)/safe_demo > /dev/null; \
 	touch $(BUILD_DIR)/readonly.jsonl; chmod 400 $(BUILD_DIR)/readonly.jsonl; \
-	$(PRELOAD) RUNTIMEX_LOG=$(BUILD_DIR)/readonly.jsonl \
+	$(PRELOAD) HEAPSENTRY_LOG=$(BUILD_DIR)/readonly.jsonl \
 	  $(BUILD_DIR)/safe_demo > /dev/null; \
 	chmod 644 $(BUILD_DIR)/readonly.jsonl; \
-	$(PRELOAD) RUNTIMEX_LOG=/dev/full $(BUILD_DIR)/safe_demo > /dev/null; \
+	$(PRELOAD) HEAPSENTRY_LOG=/dev/full $(BUILD_DIR)/safe_demo > /dev/null; \
 	echo "logging-failure cases did not disturb target execution"
 
 # Controlled vulnerable target: observation only — this is NOT automatic
 # vulnerability detection. Produces an event log for manual inspection.
 check-vulnerable: library tests
 	@set -e; \
-	$(PRELOAD) RUNTIMEX_LOG=$(LOG_VULN) $(BUILD_DIR)/vulnerable_demo \
+	$(PRELOAD) HEAPSENTRY_LOG=$(LOG_VULN) $(BUILD_DIR)/vulnerable_demo \
 	  > $(BUILD_DIR)/vuln.out 2> $(BUILD_DIR)/vuln.err || true; \
 	$(PY) $(TEST_DIR)/test_event_schema.py $(LOG_VULN); \
 	echo "vulnerable demo ran; events validated; see $(LOG_VULN)"
 
 # ---------------------------------------------------------------- bench
-# Repeatable overhead measurement: threaded_demo with/without libruntimex.
+# Repeatable overhead measurement: threaded_demo with/without libheapsentry.
 # Reports wall time; write results to docs after real runs.
 bench: library tests
 	@set -e; \
@@ -135,7 +135,7 @@ bench: library tests
 	  cat $(BUILD_DIR)/bench.$$i.b | tail -1; \
 	  /usr/bin/time -f "instrumented run $$i: %e s" \
 	    env LD_PRELOAD=$(abspath $(LIB)) \
-	    RUNTIMEX_LOG=$(LOGS_DIR)/bench.$$i.jsonl \
+	    HEAPSENTRY_LOG=$(LOGS_DIR)/bench.$$i.jsonl \
 	    $(BUILD_DIR)/threaded_demo >/dev/null 2>$(BUILD_DIR)/bench.$$i.a; \
 	  tail -1 $(BUILD_DIR)/bench.$$i.a; \
 	done; \

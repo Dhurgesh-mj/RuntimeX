@@ -13,6 +13,7 @@ venv/
 
 # Crashlab output
 results/
+logs/
 *.log
 
 # Sample target build products (source is tracked)
@@ -33,3 +34,8 @@ examples/*.o
 *.a
 *~
 .DS_Store
+
+# Generated reports
+default-report.json
+report.json
+report.html

@@ -1,5 +1,5 @@
 /*
- * RuntimeX test: allocation lifecycle under load (run under LD_PRELOAD).
+ * HeapSentry test: allocation lifecycle under load (run under LD_PRELOAD).
  * Exercises malloc/free/free(NULL)/failed allocations in loops and
  * churns allocation-identity reuse with 32-byte pairs.
  */

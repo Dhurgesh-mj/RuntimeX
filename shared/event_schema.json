@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://runtime-x.local/schemas/event-1.json",
-  "title": "RuntimeX JSONL event record, schema version 1",
-  "description": "One record per line of the RuntimeX event log. See docs/event-schema.md for full semantics.",
+  "title": "HeapSentry JSONL event record, schema version 1",
+  "description": "One record per line of the HeapSentry event log. See docs/event-schema.md for full semantics.",
   "type": "object",
   "properties": {
     "schema_version": {
@@ -24,6 +24,14 @@
         "initialization",
         "logger_error"
       ]
+    },
+    "run_id": {
+      "type": ["string", "null"],
+      "description": "Crashlab join key CRASHLAB_RUN_ID, stamped on every event when the environment provides it; null otherwise. Contract: crashlab models.RuntimeTraceRef (docs/schema.md)."
+    },
+    "batch_id": {
+      "type": ["string", "null"],
+      "description": "Crashlab join key CRASHLAB_BATCH_ID when present; null otherwise."
     },
     "allocation_id": {
       "type": ["integer", "null"],

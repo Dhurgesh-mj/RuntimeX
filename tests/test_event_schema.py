@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""RuntimeX event-log validator (Person 1 test utility only).
+"""HeapSentry event-log validator (Person 1 test utility only).
 
-Validates JSONL event logs produced by libruntimex.so:
+Validates JSONL event logs produced by libheapsentry.so:
   * syntax: every line is a valid JSON object
   * structural conformance to shared/event_schema.json (built-in checks;
     uses jsonschema for full validation only if it is installed)
@@ -47,6 +47,11 @@ def check_record(rec, idx):
     aid = rec["allocation_id"]
     check(aid is None or (isinstance(aid, int) and aid >= 1),
           "allocation_id must be null or a positive integer")
+    for f in ("run_id", "batch_id"):
+        if f in rec:
+            check(rec[f] is None or
+                  (isinstance(rec[f], str) and rec[f] != ""),
+                  "%s must be null or a non-empty string" % f)
 
     ev = rec["event"]
     if ev == "allocation":

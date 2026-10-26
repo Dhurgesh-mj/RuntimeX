@@ -1,5 +1,5 @@
 /*
- * RuntimeX target A: safe allocation demo.
+ * HeapSentry target A: safe allocation demo.
  * Ordinary allocation, valid access, deallocation. Exits 0 on success.
  */
 #include <stdio.h>
