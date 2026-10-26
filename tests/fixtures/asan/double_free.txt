@@ -1,0 +1,19 @@
+=================================================================
+==4244==ERROR: AddressSanitizer: attempting double-free on 0x602000000010 in thread T0:
+    #0 0x7f0000002222 in __interceptor_free (/lib/x86_64-linux-gnu/libasan.so.8+0xd2222)
+    #1 0x4013e4 in double_free /home/research/crashlab/examples/target_demo.c:54:5
+    #2 0x4014e0 in main /home/research/crashlab/examples/target_demo.c:118:13
+
+0x602000000010 is located 0 bytes inside of 24-byte region [0x602000000010,0x602000000028)
+freed by thread T0 here:
+    #0 0x7f0000002222 in __interceptor_free (/lib/x86_64-linux-gnu/libasan.so.8+0xd2222)
+    #1 0x4013d0 in double_free /home/research/crashlab/examples/target_demo.c:53:5
+    #2 0x4014e0 in main /home/research/crashlab/examples/target_demo.c:118:13
+
+previously allocated by thread T0 here:
+    #0 0x7f0000001111 in malloc (/lib/x86_64-linux-gnu/libasan.so.8+0xc1111)
+    #1 0x401370 in double_free /home/research/crashlab/examples/target_demo.c:51:24
+    #2 0x4014e0 in main /home/research/crashlab/examples/target_demo.c:118:13
+
+SUMMARY: AddressSanitizer: double-free /home/research/crashlab/examples/target_demo.c:54:5 in double_free
+==4244==ABORTING

@@ -1,0 +1,11 @@
+=================================================================
+==4246==ERROR: AddressSanitizer: SEGV on unknown address 0x000000000000 (pc 0x0000004015a4 bp 0x7ffd00000f90 sp 0x7ffd00000f88)
+==4246==The signal is caused by a WRITE memory access.
+==4246==Hint: address points to the zero page.
+    #0 0x4015a3 in null_deref /home/research/crashlab/examples/target_demo.c:62:5
+    #1 0x401510 in main /home/research/crashlab/examples/target_demo.c:124:13
+    #2 0x7f0000000000 in __libc_start_main (/lib/x86_64-linux-gnu/libc.so.6+0x29d8f)
+
+AddressSanitizer can not provide additional info.
+SUMMARY: AddressSanitizer: SEGV /home/research/crashlab/examples/target_demo.c:62:5 in null_deref
+==4246==ABORTING

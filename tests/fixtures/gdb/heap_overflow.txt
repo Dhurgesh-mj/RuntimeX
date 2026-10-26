@@ -1,0 +1,62 @@
+GNU gdb (Ubuntu 12.1-0ubuntu1~22.04.2) 12.1
+Copyright (C) 2022 Free Software Foundation, Inc.
+License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+Type "show copying" and "show warranty" for details.
+This GDB was configured as "x86_64-linux-gnu".
+Reading symbols from ./target...
+(No debugging symbols found in ./target)
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/lib/x86_64-linux-gnu/libthread_db.so.1".
+Program received signal SIGSEGV, Segmentation fault.
+0x00005555555551c4 in heap_overflow () at target_demo.c:39
+39          buf[16] = 'X';
+(gdb) bt full
+#0  0x00005555555551c4 in heap_overflow () at target_demo.c:39
+        buf = 0x5555555592a0 "AAAA..."
+#1  0x00005555555552f1 in main (argc=2, argv=0x7fffffffe2d8) at target_demo.c:112
+        mode = 72 'H'
+#2  0x00007ffff7da2d90 in __libc_start_call_main (main=main@entry=0x555555555149 <main>, argc=argc@entry=2, argv=argv@entry=0x7fffffffe2d8) at ../sysdeps/nptl/libc_start_call_main.h:58
+        self = <optimized out>
+#3  0x00007ffff7da2e40 in __libc_start_main_impl (main=0x555555555149 <main>, argc=2, argv=0x7fffffffe2d8, init=<optimized out>, fini=<optimized out>, rtld_fini=<optimized out>, stack_end=0x7fffffffe2c8) at ../csu/libc-start.c:392
+#4  0x00005555555550a5 in _start ()
+No symbol table info available.
+(gdb) info registers
+rax            0x5555555592a0      93824992236192
+rbx            0x555555555290      93824992236176
+rcx            0x0                 0
+rdx            0x10                16
+rsi            0x41                65
+rdi            0x5555555592a0      93824992236192
+rbp            0x7fffffffe1d0      0x7fffffffe1d0
+rsp            0x7fffffffe1c0      0x7fffffffe1c0
+r8             0x10                16
+r9             0x7ffff7fc9040      140737353912384
+r10            0x7ffff7fc3908      140737353910536
+r11            0x202               514
+r12            0x1                 1
+r13            0x7fffffffe2d8      140737488347864
+r14            0x555555555149      93824992235657
+r15            0x7ffff7ffd040      140737354125376
+rip            0x5555555551c4      0x5555555551c4 <heap_overflow+55>
+eflags         0x10202             [ IF RF ]
+cs             0x33                51
+ss             0x2b                43
+ds             0x0                 0
+es             0x0                 0
+fs             0x0                 0
+gs             0x0                 0
+__CRASHLAB_DISASM__
+=> 0x5555555551c4 <heap_overflow+55>:	mov    BYTE PTR [rbp-0x28],0x58
+   0x5555555551c8 <heap_overflow+59>:	mov    rax,QWORD PTR [rbp-0x28]
+   0x5555555551cc <heap_overflow+63>:	mov    rdi,rax
+   0x5555555551cf <heap_overflow+66>:	call   0x555555555090 <free@plt>
+   0x5555555551d4 <heap_overflow+71>:	nop
+__CRASHLAB_PC__
+$1 = 0x5555555551c4
+__CRASHLAB_SI_ADDR__
+$2 = 0x7fffffffe1d0
+A debugging session is active.
+
+Inferior 1 (process 4242) will be left in the debugger.

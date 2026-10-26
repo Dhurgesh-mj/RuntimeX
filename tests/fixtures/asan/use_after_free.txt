@@ -1,0 +1,20 @@
+=================================================================
+==4243==ERROR: AddressSanitizer: heap-use-after-free on address 0x602000000010 at pc 0x000000401456 bp 0x7ffd00000000 sp 0x7ffd00000000
+READ of size 1 at 0x602000000010 thread T0
+    #0 0x401456 in use_after_free /home/research/crashlab/examples/target_demo.c:48:24
+    #1 0x4014d0 in main /home/research/crashlab/examples/target_demo.c:115:13
+    #2 0x7f0000000000 in __libc_start_main (/lib/x86_64-linux-gnu/libc.so.6+0x29d8f)
+
+0x602000000010 is located 0 bytes inside of 32-byte region [0x602000000010,0x602000000030)
+freed by thread T0 here:
+    #0 0x7f0000002222 in free (/lib/x86_64-linux-gnu/libasan.so.8+0xd2222)
+    #1 0x4013f0 in use_after_free /home/research/crashlab/examples/target_demo.c:46:5
+    #2 0x4014d0 in main /home/research/crashlab/examples/target_demo.c:115:13
+
+previously allocated by thread T0 here:
+    #0 0x7f0000001111 in malloc (/lib/x86_64-linux-gnu/libasan.so.8+0xc1111)
+    #1 0x401350 in use_after_free /home/research/crashlab/examples/target_demo.c:42:24
+    #2 0x4014d0 in main /home/research/crashlab/examples/target_demo.c:115:13
+
+SUMMARY: AddressSanitizer: heap-use-after-free /home/research/crashlab/examples/target_demo.c:48:24 in use_after_free
+==4243==ABORTING

@@ -1,0 +1,16 @@
+=================================================================
+==4242==ERROR: AddressSanitizer: heap-buffer-overflow on address 0x602000000011 at pc 0x000000401234 bp 0x7ffd00000000 sp 0x7ffd00000000
+WRITE of size 1 at 0x602000000011 thread T0
+    #0 0x401234 in heap_overflow /home/research/crashlab/examples/target_demo.c:39:12
+    #1 0x4014aa in main /home/research/crashlab/examples/target_demo.c:112:13
+    #2 0x7f0000000000 in __libc_start_main (/lib/x86_64-linux-gnu/libc.so.6+0x29d8f)
+    #3 0x4010a9 in _start (/home/research/crashlab/examples/target_asan+0x4010a9)
+
+0x602000000011 is located 1 bytes to the right of 16-byte region [0x602000000000,0x602000000010)
+allocated by thread T0 here:
+    #0 0x7f0000001111 in malloc (/lib/x86_64-linux-gnu/libasan.so.8+0xc1111)
+    #1 0x4011f0 in heap_overflow /home/research/crashlab/examples/target_demo.c:34:24
+    #2 0x4014aa in main /home/research/crashlab/examples/target_demo.c:112:13
+
+SUMMARY: AddressSanitizer: heap-buffer-overflow /home/research/crashlab/examples/target_demo.c:39:12 in heap_overflow
+==4242==ABORTING
