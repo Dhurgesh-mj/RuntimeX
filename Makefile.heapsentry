@@ -1,0 +1,47 @@
+# HeapSentry Unified Detection Engine Makefile
+# Platform-aware: macOS arm64/x86_64 and Linux x86_64/arm64
+
+CC      ?= cc
+CFLAGS  ?= -std=c11 -O2 -g
+WARN    := -Wall -Wextra -Wshadow -Wno-unused-parameter
+PIC     := -fPIC -fvisibility=hidden
+DEFS    := -D_GNU_SOURCE
+
+RUNTIME_DIR := runtime
+BUILD_DIR   := build_detect
+
+UNAME_S := $(shell uname -s)
+
+ifeq ($(UNAME_S),Darwin)
+    LIB_EXT := dylib
+    SHFLAG  := -dynamiclib
+    LDFLAGS := -lpthread -ldl
+else
+    LIB_EXT := so
+    SHFLAG  := -shared
+    LDFLAGS := -lpthread -ldl
+endif
+
+LIB := $(BUILD_DIR)/libheapsentry_detect.$(LIB_EXT)
+
+SRCS := $(RUNTIME_DIR)/resolver.c \
+        $(RUNTIME_DIR)/logger.c \
+        $(RUNTIME_DIR)/allocator.c \
+        $(RUNTIME_DIR)/detector.c \
+        $(RUNTIME_DIR)/entry.c
+
+.PHONY: all library clean
+
+all: library
+
+library: $(LIB)
+
+$(LIB): $(SRCS) $(RUNTIME_DIR)/internal.h | $(BUILD_DIR)
+	$(CC) $(CFLAGS) $(WARN) $(PIC) $(DEFS) $(SHFLAG) -I$(RUNTIME_DIR) $(SRCS) -o $@ $(LDFLAGS)
+	@echo "Built $@"
+
+$(BUILD_DIR):
+	mkdir -p $(BUILD_DIR)
+
+clean:
+	rm -rf $(BUILD_DIR)

@@ -39,3 +39,9 @@ examples/*.o
 default-report.json
 report.json
 report.html
+
+# HeapSentry unified detection outputs
+build_detect/
+heapsentry_out/
+results_*/
+*.dylib
