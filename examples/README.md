@@ -1,71 +1,64 @@
-# Sample targets
+# Sample Vulnerability Targets
 
-Two local targets are provided. Both are intentionally buggy and exist only
-for defensive crash-triage research.
+A collection of standalone, controlled C test targets demonstrating specific memory-safety vulnerability classes. These samples are designed for testing and observing RuntimeX, HeapSentry, and CrashLab in a local environment.
 
-## Real ASan/GDB target (Linux/macOS)
+---
 
-Requires a C compiler with ASan support.
+## 📦 Available Vulnerability Samples
 
-```sh
+| File | Target Binary | Vulnerability Class | Severity | Detection Mechanism |
+|---|---|---|---|---|
+| [`heap_overflow_demo.c`](heap_overflow_demo.c) | `heap_overflow_demo` | CWE-122 (Heap Buffer Overflow) | `CRITICAL` | 16-byte right red-zone canary (`0xFEEDFACEDEADBEEF`) |
+| [`use_after_free_demo.c`](use_after_free_demo.c) | `use_after_free_demo` | CWE-416 (Use-After-Free Write) | `HIGH` | Post-free memory poisoning (`0xDD`) |
+| [`double_free_demo.c`](double_free_demo.c) | `double_free_demo` | CWE-415 (Double Free) | `CRITICAL` | 512-slot quarantine ring buffer |
+| [`memory_leak_demo.c`](memory_leak_demo.c) | `memory_leak_demo` | CWE-401 (Memory Leak) | `MEDIUM` | Exit-time hash table walk (`atexit`) |
+| [`integer_overflow_demo.c`](integer_overflow_demo.c) | `integer_overflow_demo` | CWE-190 -> CWE-122 | `CRITICAL` | Arithmetic wrap -> undersized malloc |
+| [`target_demo.c`](target_demo.c) | `target` | Multi-bug corpus test target | `VARIOUS` | First byte mode switch (`H/U/D/S/P/T`) |
+
+---
+
+## 🔨 How to Build
+
+Build all targets with debug symbols:
+```bash
 cd examples
-make          # ./target
-make asan     # ./target_asan
+make all
 ```
 
-Start with the plain build, then repeat the same input with the ASan build:
-
-```sh
-# stdin delivery
-crashlab run --binary ./target --input ../corpus/02_heap_overflow.bin --timeout 5
-
-# repeat with ASan and capture stderr evidence
-crashlab run --binary ./target_asan --input ../corpus/02_heap_overflow.bin \
-  --timeout 5 --asan-options abort_on_error=1:symbolize=1
-
-# or analyze a saved separately-captured ASan report
-crashlab analyze --results results --asan-dir ./asan-logs
+Or build with AddressSanitizer:
+```bash
+make asan
 ```
 
-Input modes:
-
-| First byte | Bug |
-|---|---|
-| `N` | normal path |
-| `H` | one-byte heap overflow |
-| `U` | use-after-free read |
-| `D` | double free |
-| `S` | stack buffer overflow |
-| `P` | null-pointer write |
-| `T` | sleeps forever (timeout path) |
-
-## Portable smoke target (any host)
-
-`examples/synthetic_target.py` requires no compiler. It reproduces the runner,
-signal normalization, classification, and report pipeline, but it is **not** a
-real memory-safety test target:
-
-```sh
-python examples/synthetic_target.py corpus/02_heap_overflow.bin
-python -m crashlab run --binary python --binary-arg examples/synthetic_target.py \
-  --input-mode file --input corpus/02_heap_overflow.bin --timeout 5
+Clean build products:
+```bash
+make clean
 ```
 
-Modes `H/U/D/S/P` terminate with a real POSIX signal where available and with a
-simulated canonical NTSTATUS on Windows. Mode `A` writes a realistic
-AddressSanitizer report to stderr and exits 1, which exercises the ASan parser,
-confirmation logic, and both report writers without needing an instrumented
-build.
+---
 
-## ASan runtime
+## 🚀 How to Test with RuntimeX
 
-On Linux, ASan is normally linked into the build (`-fsanitize=address`). If you
-use a dynamically loaded runtime instead, pass it explicitly:
+From the repository root:
 
-```sh
-crashlab run --binary ./target --input ./case.bin \
-  --preload /usr/lib/x86_64-linux-gnu/libasan.so.8
+```bash
+# 1. Test Heap Buffer Overflow
+./runtimex scan examples/heap_overflow_demo --out results_heap
+
+# 2. Test Double Free
+./runtimex scan examples/double_free_demo --out results_df
+
+# 3. Test Use-After-Free
+./runtimex scan examples/use_after_free_demo --out results_uaf
+
+# 4. Test Memory Leak
+./runtimex scan examples/memory_leak_demo --out results_leak
+
+# 5. Test Integer Overflow leading to Heap Overflow
+./runtimex scan examples/integer_overflow_demo --out results_int
 ```
 
-`LD_PRELOAD` is a POSIX feature. On Windows the value is recorded in the run
-manifest but not applied; use a Windows debugger/sanitizer stack separately.
+Open the generated report for any run:
+```bash
+open results_heap/unified_report.html
+```

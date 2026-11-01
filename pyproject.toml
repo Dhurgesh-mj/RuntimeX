@@ -32,6 +32,7 @@ dev = ["pytest>=8.0"]
 [project.scripts]
 crashlab = "crashlab.cli:main"
 heapsentry = "heapsentry.cli:main"
+runtimex = "runtimex.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

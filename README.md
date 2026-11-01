@@ -1,166 +1,176 @@
-# HeapSentry — Unified Memory-Safety Scanner & Triage Engine
+# RuntimeX — Unified Memory-Safety Scanner & Crash Triage Toolkit
 
-HeapSentry is an all-in-one defensive memory-safety scanner and crash triage engine. It combines a dynamic interposition C runtime with an automated Python orchestrator to detect heap buffer overflows, double-frees, use-after-free writes, and memory leaks in compiled binaries without recompilation, generating self-contained visual HTML and JSON reports in a single command.
-
----
-
-## Capabilities
-
-| Vulnerability Class | Detection Mechanism | Severity |
-|---|---|---|
-| **Heap Buffer Overflow (OOB Write)** | 16-byte left and right canaries (`0xFEEDFACEDEADBEEF`). Canary corruption on `free()` reports the exact corrupted bytes, overflow side (`left`/`right`), fault address, and allocation size. | `CRITICAL` |
-| **Double-Free** | 512-slot quarantine ring buffer. Intercepts duplicate `free()` calls before they reach the system allocator, preventing heap corruption. | `CRITICAL` |
-| **Use-After-Free (UAF) Write** | Memory poisoning on free (`0xDD`). Stamped bytes expose subsequent writes into freed buffers. | `HIGH` |
-| **Memory Leaks** | Live allocation tracking in an open-addressing table. Process exit walk logs un-freed allocations with their size and address. | `MEDIUM` |
-| **Abnormal Crashes** | Captures fatal signals (`SIGSEGV`, `SIGBUS`, `SIGABRT`, `SIGILL`, `SIGFPE`, `SIGTRAP`) and NTSTATUS crash codes. | `HIGH` |
+**RuntimeX** unifies active runtime heap instrumentation with automated crash triage into a single, cohesive security toolkit:
+1. **HeapSentry**: Active runtime memory-safety detection via custom C dynamic interposition (`LD_PRELOAD`), catching heap buffer overflows (`0xFEEDFACEDEADBEEF` red-zone canaries), double-frees (512-slot quarantine ring buffer), use-after-free writes (`0xDD` memory poisoning), and leak walks at exit without binary recompilation.
+2. **CrashLab**: Automated crash triage, signal monitoring (`SIGSEGV`, `SIGABRT`, `SIGBUS`, etc.), GDB symbolication, faulting instruction disassembly, register dumps, ASan/UBSan report parsing, and normalized stack signature deduplication.
+3. **Unified Dashboard**: A single interactive, dark-themed HTML report and JSON summary correlating active heap corruptions with debugger call stacks.
 
 ---
 
-## Quickstart
+## ⚡ Quickstart — Run Everything in One Command
 
-### 1. Environment Check
-Validate compiler availability, LLDB presence, and dynamic library injection capabilities:
+### 1. Unified Corpus Scan (HeapSentry + CrashLab)
+Run both engines in parallel against your target binary and a test corpus (a directory containing multiple test input files):
 ```bash
-PYTHONPATH=src python3 -m heapsentry doctor
+./runtimex scan examples/target --input-dir corpus --workers 4 --out runtimex_out
+```
+*Or using the shell script:*
+```bash
+./runtimex.sh examples/target corpus runtimex_out
 ```
 
-### 2. Scan a Single Binary
-Run a target binary against a test input:
+> **Note:** A **corpus** is a directory of test input files (valid cases, edge cases, and crash triggers). You can also test a **single file** using `--input <file>` or test a binary without inputs.
+
+### 2. Testing Your Own Program
+To test any compiled C/C++ program:
 ```bash
-PYTHONPATH=src python3 -m heapsentry scan ./your_binary --input payload.bin --out results/
+# 1. Compile with debug symbols (-g)
+gcc -g -O0 your_program.c -o your_program
+
+# 2. Run RuntimeX (single input, corpus, or standalone)
+./runtimex scan ./your_program --input-dir corpus/ --out my_results
+# Or single input:
+./runtimex scan ./your_program --input input.bin --out my_results
 ```
+
 Output:
 ```text
-Scan complete. 1 run. 2 finding(s): 1 critical, 1 medium.
-Report: results/report.html
+============================================================
+ RuntimeX Unified Memory-Safety & Crash Triage Pipeline
+ Target:  examples/target
+ Mode:    Corpus (corpus)
+ Workers: 4  |  Timeout: 5.0s  |  GDB: Enabled
+============================================================
+
+[Phase 1/3] Running HeapSentry Active Canary & Quarantine Detection...
+  [1/8] 02_heap_overflow.bin — 1 critical, 2 medium
+  [2/8] 04_double_free.bin   — 1 critical, 1 medium
+  [3/8] 07_null_deref.bin     — 1 high
+  ...
+
+[Phase 2/3] Running CrashLab Signal Monitoring & GDB Triage...
+
+[Phase 3/3] Generating Unified RuntimeX Report...
+
+============================================================
+ RuntimeX Execution Summary
+============================================================
+ HeapSentry Violations:  14 (2 critical, 3 high)
+   • [CRITICAL] heap_buffer_overflow @ 0x5e0748b9d300
+   • [CRITICAL] double_free @ 0x5a63376b9300
+   • [MEDIUM]   memory_leak (12 blocks)
+ CrashLab Crash Groups:  2 unique signatures (3 total crashes)
+   • [CONFIRMED_VULNERABILITY] double-free (x2) -> signature a6ff66efe94b6524
+   • [CRASH] null-pointer-dereference (x1) -> signature 7507755df97342e9
+------------------------------------------------------------
+ 📊 HTML Report: file:///.../runtimex_out/unified_report.html
+ 📄 JSON Report: file:///.../runtimex_out/unified_report.json
+============================================================
 ```
 
-### 3. Scan an Entire Corpus in Parallel
-Run a directory of seed inputs (e.g. from a fuzzer or test corpus) across multi-threaded workers:
+### 2. View the Unified Report
+Open the generated report in any web browser:
 ```bash
-PYTHONPATH=src python3 -m heapsentry scan ./your_binary --input-dir corpus/ --workers 4 --out results/
+open runtimex_out/unified_report.html
 ```
 
-### 4. Open the Visual Report
-Open the self-contained HTML report in any browser:
+### 3. Check System Capabilities
+Verify your GDB, ASan, C compiler, and detection runtime:
 ```bash
-open results/report.html
+./runtimex doctor
 ```
 
 ---
 
-## How It Works
+## 📊 Unified Report Highlights
 
-```mermaid
-flowchart TD
-    CLI["heapsentry scan ./binary --input x.bin"] --> BUILD["Auto-build detection library\n(build_detect/libheapsentry_detect.*)"]
-    BUILD --> RUN["Execute binary with injection\n(DYLD_INSERT_LIBRARIES / LD_PRELOAD)"]
-    RUN --> RUNTIME["C Runtime Core (runtime/)\n• Red-zone canaries\n• Quarantine ring buffer\n• Memory poisoning (0xDD)\n• Exit leak walker"]
-    RUNTIME --> JSONL["Realtime Event Stream\n(events.jsonl)"]
-    RUN --> CRASH{"Crash?"}
-    CRASH -->|Yes| LLDB["Batch LLDB / ASan Parser\n• Registers & PC\n• Symbolic backtrace"]
-    CRASH -->|No| CLEAN["Clean Termination"]
-    JSONL & LLDB & CLEAN --> ANALYZE["Analyzer\n• Correlate events & signals\n• Group by signature"]
-    ANALYZE --> HTML["Interactive HTML Report\n(report.html)"]
-    ANALYZE --> JSON["Structured Findings\n(findings.json)"]
-```
-
-1. **Dynamic Interposition**: HeapSentry transparently intercepts `malloc`, `free`, `realloc`, and `calloc` via `DYLD_INSERT_LIBRARIES` on macOS (with full `DYLD_INTERPOSE` and `malloc_size` handling) or `LD_PRELOAD` on Linux.
-2. **Deterministic Red Zones**: Each allocation is padded with embedded canaries. Out-of-bounds writes are caught at deallocation.
-3. **Quarantine & Poisoning**: Blocks are poisoned with `0xDD` and held in quarantine to safely catch double-frees and UAF writes.
-4. **Crash Backtraces**: When a fatal signal occurs, LLDB is automatically invoked in non-interactive batch mode to capture register dumps and symbolicated stack traces.
-5. **Standalone Reporting**: Generates a zero-dependency HTML report containing finding cards, interactive allocation timelines, and raw evidence inspection.
+The unified HTML report (`unified_report.html`) is completely self-contained (inline CSS & JS, zero external dependencies) and includes:
+- **Executive Threat Level**: Dynamic risk indicator (`CRITICAL RISK`, `HIGH RISK`, `MEDIUM RISK`, `CLEAN`) with executive metric cards.
+- **Cross-Engine Correlation**: Table correlating active HeapSentry red-zone/quarantine detections with CrashLab GDB debugger signals.
+- **Interactive Finding Cards**:
+  - 💥 **Exploit Impact**: Real-world exploit scenarios, CVE analogies, and severity justifications.
+  - 🛠️ **Remediation Guide**: Clear, actionable instructions for developers to fix the flaw.
+  - 💻 **Code Patterns**: Side-by-side ❌ Vulnerable vs ✅ Safe C/C++ code comparisons.
+  - 🔍 **Raw Evidence**: Allocation IDs, pointers, memory addresses, and canary byte stamps.
+- **Deduplicated Crash Groups**:
+  - GDB call stacks with frame numbers, function symbols, source files, and lines.
+  - Faulting assembly instructions and register state dumps.
+  - Exact copyable reproduction commands.
+- **Allocation Lifecycle Timeline**: Tracking every buffer from allocation to its final fate (`freed`, `leaked`, `overflowed`, `double_freed`).
+- **Low-Level Hook Event Stream**: Chronological event logs with nanosecond deltas and canary values (`0xFEEDFACEDEADBEEF`).
+- **Memory-Safety Matrix**: Visual diagnostic cards for Heap Buffer Overflow, Double-Free, Use-After-Free, and Memory Leaks.
 
 ---
 
-## CLI Reference
+## 🛠️ Individual Sub-Tools
 
-### `heapsentry scan`
-Executes one or more target runs and generates reports.
+RuntimeX also allows you to invoke each engine independently:
 
-```text
-usage: heapsentry scan [-h] [--input FILE] [--input-dir DIR] [--out DIR]
-                       [--report FILE] [--timeout SEC] [--workers N]
-                       [--no-build] [--quiet] [--args ARG [ARG ...]]
-                       binary
-
-positional arguments:
-  binary             Path to the target binary to scan.
-
-options:
-  --input FILE       Input file to feed to the target via stdin.
-  --input-dir DIR    Directory of seed inputs (corpus mode).
-  --out DIR          Directory to store run artifacts (default: heapsentry_out).
-  --report FILE      Custom path for the HTML report (default: <out>/report.html).
-  --timeout SEC      Per-run execution timeout in seconds (default: 10.0).
-  --workers N        Number of parallel worker processes in corpus mode (default: 1).
-  --no-build         Skip auto-compiling the detection dynamic library.
-  --quiet            Suppress stdout progress indicators.
-  --args ARG ...     Extra command-line arguments passed to the target binary.
-```
-
-### `heapsentry report`
-Re-renders visual HTML reports from an existing scan directory:
+### HeapSentry Alone
 ```bash
-PYTHONPATH=src python3 -m heapsentry report heapsentry_out/ --out new_report.html
+# Scan single input
+PYTHONPATH=src python3 -m heapsentry scan ./your_binary --input input.bin --out hs_out
+
+# Scan entire corpus
+PYTHONPATH=src python3 -m heapsentry scan ./your_binary --input-dir corpus/ --workers 4 --out hs_out
 ```
 
-### `heapsentry doctor`
-Verifies environment dependencies:
+### CrashLab Alone
 ```bash
-PYTHONPATH=src python3 -m heapsentry doctor
+# Run GDB crash triage across corpus
+PYTHONPATH=src python3 -m crashlab run --binary ./your_binary --input-dir corpus/ --workers 4 --out cl_out
+
+# Re-analyze saved runs
+PYTHONPATH=src python3 -m crashlab analyze --results cl_out/ --report-html cl_out/report.html
 ```
 
----
-
-## Output Structure
-
-Every run creates a structured output directory:
-
-```text
-results/
-├── report.html                    # Visual self-contained HTML report
-├── <run_id>/
-│   ├── findings.json              # Prioritized findings array
-│   ├── events.jsonl               # Chronological allocation/deallocation timeline
-│   ├── stdout.txt                 # Target standard output
-│   ├── stderr.txt                 # Target standard error (including ASan logs)
-│   ├── backtrace.txt              # Symbolic LLDB stack trace (on crash)
-│   └── input.bin                  # Exact reproduction input bytes
-```
-
----
-
-## Repository Map
-
-| Directory / File | Description |
-|---|---|
-| [`runtime/`](runtime/) | C detection engine: red-zone canaries, quarantine, leak tracking, JSONL logger. |
-| [`src/heapsentry/`](src/heapsentry/) | Python unified engine: CLI, scanner, event parser, analyzer, LLDB bridge, HTML report. |
-| [`src/crashlab/`](src/crashlab/) | Standalone crash classification, NTSTATUS normalization, and ASan parsing engine. |
-| [`targets/`](targets/) | Controlled test targets demonstrating memory-safety vulnerabilities. |
-| [`corpus/`](corpus/) | Seed inputs exercising normal runs, overflows, UAFs, double-frees, and timeouts. |
-| [`tests/`](tests/) | Unit and end-to-end integration test suite. |
-| [`Makefile.heapsentry`](Makefile.heapsentry) | Dedicated build driver for the detection dynamic library. |
-| [`pyproject.toml`](pyproject.toml) | Package metadata, entry points (`heapsentry`, `crashlab`), and pytest configuration. |
-
----
-
-## Development & Testing
-
-Run the full automated test suite:
+### Regenerate Unified Report from Existing Runs
 ```bash
-python -m pip install -e ".[dev]"
-pytest tests/
+PYTHONPATH=src python3 src/unified_report.py \
+  --heapsentry-dir runtimex_out/heapsentry \
+  --crashlab-dir runtimex_out/crashlab \
+  --binary examples/target \
+  --out runtimex_out/unified_report.html \
+  --out-json runtimex_out/unified_report.json
 ```
 
-Build the C detection library directly:
+---
+
+## 🧪 Testing & Validation
+
+Run the full automated test suite (122+ tests):
+```bash
+PYTHONPATH=src pytest tests/
+```
+
+Build the detection dynamic library:
 ```bash
 make -f Makefile.heapsentry library
 ```
 
 ---
 
-## License
+## 📁 Repository Structure
 
-MIT License. Designed for authorized defensive research and memory-safety analysis.
+```text
+RuntimeX/
+├── runtimex                         # Main executable CLI wrapper
+├── runtimex.sh                      # One-command bash runner
+├── src/
+│   ├── runtimex/                    # Unified orchestrator & CLI
+│   │   ├── cli.py                   # runtimex CLI entry point
+│   │   └── orchestrator.py          # Coordinates HeapSentry + CrashLab
+│   ├── unified_report.py            # Unified HTML & JSON report generator
+│   ├── heapsentry/                  # Active memory-safety engine (LD_PRELOAD)
+│   └── crashlab/                    # Crash triage & GDB analysis engine
+├── runtime/                         # C allocator hooks, canaries & quarantine
+├── corpus/                          # Test suite inputs for memory-safety flaws
+├── examples/                        # Sample targets (synthetic & demo C binaries)
+└── tests/                           # 122+ automated pytest test cases
+```
+
+---
+
+## 🛡️ License
+
+MIT License. Designed for authorized defensive research, fuzzing triage, and memory-safety analysis.
